@@ -1,0 +1,17 @@
+{
+  "name": "onroad-api",
+  "version": "1.0.0",
+  "description": "Onroad API",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Abishek",
+  "license": "ISC",
+  "dependencies": {
+    "crypto": "0.0.3",
+    "express": "^4.13.0",
+    "https": "^1.0.0",
+    "moment": "^2.10.3"
+  }
+}
