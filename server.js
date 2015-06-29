@@ -31,7 +31,6 @@ function create_sas_token(uri, key_name, key) {
     var token = 'SharedAccessSignature sr=' + encodeURIComponent(uri) + '&sig=' + encodeURIComponent(signature) + '&se=' + expiry + '&skn=' + key_name;
     return token;
 };
-var my_sas = create_sas_token(my_uri, my_key_name, my_key)
 //Eventhubs config ends
 
 //Data parser
@@ -48,6 +47,7 @@ router.get('/location', function(req, res) {
 
 	//Send to EventHubs - starts
 	var payload = parse_data(data);
+	var my_sas = create_sas_token(my_uri, my_key_name, my_key);
 	var options = {
 	  hostname: namespace + '.servicebus.windows.net',
 	  port: 443,
