@@ -19,7 +19,7 @@ var router = express.Router();              // get an instance of the express Ro
 var namespace = 'onroad-ns';
 var hubname = 'onroad';
 var my_key_name = 'SendRule';
-var my_key = process.env.EVENTHUBS_KEY;
+var my_key = process.env.EVENTHUBS_KEY || '97qjBwpD9k1mnspshDAW4ExYqL6IFYGZvnxKxhIfeIs=';
 var my_uri = 'https://' + namespace + '.servicebus.windows.net' + '/' + hubname + '/messages';
 function create_sas_token(uri, key_name, key) {
     // Token expires in one hour
