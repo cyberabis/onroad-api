@@ -22,9 +22,10 @@ var my_key = process.env.EVENTHUBS_KEY;
 //Eventhubs config ends
 
 // Route
-router.get('/location', function(req, res) {
+router.get('/location/:devicename', function(req, res) {
 	var data = req.query.data;
-	send_to_eventhubs(data);
+	var devicename = req.param.devicename;
+	send_to_eventhubs(devicename, data);
     res.status(200).end();   
 });
 
@@ -60,14 +61,13 @@ function create_sas_token(uri, key_name, key) {
 function parse_data(data) {
 	//TODO data needs to changed to parsed_data
 	//As JSON
-	var parsed_data = {device: 'deviceid', lat: 11.0, long:77.0, time: 1435572381, speed:50.5};
+	var parsed_data = [{device: 'deviceid', lat: 11.0, long:77.0, time: 1435572381, speed:50.5}];
 	return parsed_data;
 };
 
 //Main function to send event
-function send_to_eventhubs(data) {
+function send_to_eventhubs(devicename, data) {
 	var parsed_data = parse_data(data);
-	var devicename = parsed_data.device;
 	var payload = JSON.stringify(parsed_data);
 	var my_uri = 'https://' + namespace + '.servicebus.windows.net' + '/' + hubname + '/publishers/' + devicename + '/messages';
 	var my_sas = create_sas_token(my_uri, my_key_name, my_key);
