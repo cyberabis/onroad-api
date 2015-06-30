@@ -14,12 +14,37 @@ var port = process.env.PORT || 3000;        // set our port
 // =============================================================================
 var router = express.Router();              // get an instance of the express Router
 
-
 //Eventhubs Configs
 var namespace = 'onroad-ns';
 var hubname = 'onroad';
 var my_key_name = 'SendRule';
 var my_key = process.env.EVENTHUBS_KEY;
+//Eventhubs config ends
+
+// Route
+router.get('/location', function(req, res) {
+	var data = req.query.data;
+	send_to_eventhubs(data);
+    res.status(200).end();   
+});
+
+// more routes for our API will happen here
+
+// REGISTER OUR ROUTES -------------------------------
+// all of our routes will be prefixed with /api
+app.use('/api', router);
+
+// START THE SERVER
+// =============================================================================
+app.listen(port);
+console.log('Started on port ' + port);
+
+
+
+// APP SPECIFIC FUNCTIONS
+// =============================================================================
+
+//SAS token processing
 function create_sas_token(uri, key_name, key) {
     // Token expires in one hour
     var expiry = moment().add(1, 'hours').unix();
@@ -30,7 +55,6 @@ function create_sas_token(uri, key_name, key) {
     var token = 'SharedAccessSignature sr=' + encodeURIComponent(uri) + '&sig=' + encodeURIComponent(signature) + '&se=' + expiry + '&skn=' + key_name;
     return token;
 };
-//Eventhubs config ends
 
 //Data parser
 function parse_data(data) {
@@ -40,12 +64,8 @@ function parse_data(data) {
 	return parsed_data;
 };
 
-
-// Route
-router.get('/location', function(req, res) {
-	var data = req.query.data;
-
-	//Send to EventHubs - starts
+//Main function to send event
+function send_to_eventhubs(data) {
 	var parsed_data = parse_data(data);
 	var devicename = parsed_data.device;
 	var payload = JSON.stringify(parsed_data);
@@ -70,18 +90,4 @@ router.get('/location', function(req, res) {
 	});
 	request.write(payload);
 	request.end();
-	//Send to EventHubs - ends
-
-    res.status(200).end();   
-});
-
-// more routes for our API will happen here
-
-// REGISTER OUR ROUTES -------------------------------
-// all of our routes will be prefixed with /api
-app.use('/api', router);
-
-// START THE SERVER
-// =============================================================================
-app.listen(port);
-console.log('Started on port ' + port);
+};
