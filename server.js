@@ -58,16 +58,34 @@ function create_sas_token(uri, key_name, key) {
 };
 
 //Data parser
-function parse_data(data) {
+function parse_data(devicename, data) {
 	//TODO data needs to changed to parsed_data
 	//As JSON
-	var parsed_data = [{device: 'deviceid', lat: 11.0, long:77.0, time: 1435572381, speed:50.5}];
+	//data = '0,1101.444401,7700.254386,243.095589,20150629101258.011,0,0,0.000000,0.000000';
+	var events = data.split('$');
+	var parsed_data = [];
+	for(var i in events) {
+		var fields = events[i].split(',');
+		var tsInput = fields[4];
+		var match = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2}).(\d{3})$/.exec(tsInput);
+		var ts = match[1] + '-' + match[2] + '-' + match[3] + ' ' + match[4] + ':' + match[5] + ':' + match[6] + '.' + match[7];
+		var eventObj = {
+			device: devicename,
+			lat: parseFloat(fields[1])/100,
+			long: parseFloat(fields[2])/100,
+			time: Date.parse(ts),
+			speed: parseFloat(fields[7])
+		};
+		parsed_data.push(eventObj);
+	}
+	console.log('Parsed Data: ' + JSON.stringify(parsed_data));
+	//parsed_data = [{device: 'deviceid', lat: 11.0, long:77.0, time: 1435572381, speed:50.5}];
 	return parsed_data;
 };
 
 //Main function to send event
 function send_to_eventhubs(devicename, data) {
-	var parsed_data = parse_data(data);
+	var parsed_data = parse_data(devicename, data);
 	var payload = JSON.stringify(parsed_data);
 	var my_uri = 'https://' + namespace + '.servicebus.windows.net' + '/' + hubname + '/publishers/' + devicename + '/messages';
 	var my_sas = create_sas_token(my_uri, my_key_name, my_key);
