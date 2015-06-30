@@ -20,7 +20,6 @@ var namespace = 'onroad-ns';
 var hubname = 'onroad';
 var my_key_name = 'SendRule';
 var my_key = process.env.EVENTHUBS_KEY;
-var my_uri = 'https://' + namespace + '.servicebus.windows.net' + '/' + hubname + '/messages';
 function create_sas_token(uri, key_name, key) {
     // Token expires in one hour
     var expiry = moment().add(1, 'hours').unix();
@@ -35,9 +34,10 @@ function create_sas_token(uri, key_name, key) {
 
 //Data parser
 function parse_data(data) {
-	//TODO data needs to changed to payload
-	var payload = '{\"device\":\"deviceid\", \"lat\":11.0, \"long\":77.0, \"time\": 1435572381, \"speed\":50.5}';
-	return payload;
+	//TODO data needs to changed to parsed_data
+	//As JSON
+	var parsed_data = {device: 'deviceid', lat: 11.0, long:77.0, time: 1435572381, speed:50.5};
+	return parsed_data;
 };
 
 
@@ -46,12 +46,15 @@ router.get('/location', function(req, res) {
 	var data = req.query.data;
 
 	//Send to EventHubs - starts
-	var payload = parse_data(data);
+	var parsed_data = parse_data(data);
+	var devicename = parsed_data.device;
+	var payload = JSON.stringify(parsed_data);
+	var my_uri = 'https://' + namespace + '.servicebus.windows.net' + '/' + hubname + '/publishers/' + devicename + '/messages';
 	var my_sas = create_sas_token(my_uri, my_key_name, my_key);
 	var options = {
 	  hostname: namespace + '.servicebus.windows.net',
 	  port: 443,
-	  path: '/' + hubname + '/messages',
+	  path: '/' + hubname + '/publishers/' + devicename + '/messages',
 	  method: 'POST',
 	  headers: {
 	    'Authorization': my_sas,
