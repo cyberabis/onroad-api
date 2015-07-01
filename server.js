@@ -70,6 +70,8 @@ function parse_data(devicename, data) {
 	//TODO data needs to changed to parsed_data
 	//As JSON
 	//data = '0,1101.444401,7700.254386,243.095589,20150629101258.011,0,0,0.000000,0.000000';
+	//Chop last char
+	data = data.substring(0, data.length - 1);
 	var events = data.split('$');
 	var parsed_data = [];
 	for(var i in events) {
