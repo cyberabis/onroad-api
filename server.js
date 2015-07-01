@@ -7,6 +7,7 @@ var app        = express();                 // define our app using express
 var https = require('https');
 var crypto = require('crypto');
 var moment = require('moment');
+var azure = require('azure');
 
 var port = process.env.PORT || 3000;        // set our port
 
@@ -21,11 +22,18 @@ var my_key_name = 'SendRule';
 var my_key = process.env.EVENTHUBS_KEY;
 //Eventhubs config ends
 
+//Servicebus Topic Configs
+var ns_key = process.env.NS_KEY;
+var serviceBusService = azure.createServiceBusService('Endpoint=sb://'+ namespace + '.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=' + ns_key);
+var topicName = 'onroad-topic';
+//Service Topic Config ends
+
 // Route
 router.get('/location/:devicename', function(req, res) {
 	var data = req.query.data;
 	var devicename = req.param.devicename;
-	send_to_eventhubs(devicename, data);
+	//send_to_eventhubs(devicename, data);
+	send_to_topic(devicename, data);
     res.status(200).end();   
 });
 
@@ -83,7 +91,21 @@ function parse_data(devicename, data) {
 	return parsed_data;
 };
 
-//Main function to send event
+//Main function to send to service bus topis 
+function send_to_topic(devicename, data) {
+	var parsed_data = parse_data(devicename, data);
+	var payload = JSON.stringify(parsed_data);
+	serviceBusService.sendTopicMessage(topicName, payload, function(error) {
+	  if(!error) {
+	    // Message sent
+	    console.log('Message sent');
+	  } else {
+	  	console.log('Unable to send message: ' + error);
+	  }
+	}); 
+};
+
+//Main function to send to event hubs
 function send_to_eventhubs(devicename, data) {
 	var parsed_data = parse_data(devicename, data);
 	var payload = JSON.stringify(parsed_data);
