@@ -74,6 +74,26 @@ function create_sas_token(uri, key_name, key) {
 };
 
 //Data parser
+function convert(latitude, longitude){
+	// convert latitude from minutes to decimal
+	degrees = Math.floor(latitude / 100);
+	minutes = latitude - (100 * degrees);
+	minutes /= 60;
+	degrees += minutes;
+	//turn direction into + or -
+	// if (latdir[0] == 'S') degrees *= -1;
+	lat = degrees;
+	//convert longitude from minutes to decimal
+	degrees = Math.floor(longitude / 100);
+	minutes = longitude - (100 * degrees);
+	minutes /= 60;
+	degrees += minutes;
+	//turn direction into + or -
+	//if (longdir[0] == 'W') degrees *= -1;
+	lon = degrees;
+	return [lat, lon];
+}
+
 function parse_data(devicename, data, condition) {
 	//TODO data needs to changed to parsed_data
 	//As JSON
@@ -89,11 +109,12 @@ function parse_data(devicename, data, condition) {
 		var match = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2}).(\d{3})$/.exec(tsInput);
 		var ts = match[1] + '-' + match[2] + '-' + match[3] + ' ' + match[4] + ':' + match[5] + ':' + match[6] + '.' + match[7];
 		var ttff = parseInt(fields[5]);
+		var latlong = convert(parseFloat(fields[1]),parseFloat(fields[2]));
 		if (((condition === 'filter') && (ttff > 0)) || (condition === 'nofilter')) {
 			var eventObj = {
 				device: devicename,
-				lat: parseFloat(fields[1])/100,
-				long: parseFloat(fields[2])/100,
+				lat: latlong[0],
+				long: latlong[1],
 				time: Date.parse(ts),
 				speed: parseFloat(fields[7])
 			};
