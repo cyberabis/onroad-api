@@ -8,7 +8,7 @@ var https = require('https');
 var crypto = require('crypto');
 var moment = require('moment');
 var azure = require('azure');
-var client = require('twilio')('AC2b02ea2ccb0064fa38476bced2fdeebe', '68c07e41cb573448d3a374bce0787aa7');
+var client = require('twilio')('AC2b02ea2ccb0064fa38476bced2fdeebe', process.env.TWILIO_KEY);
 var Firebase = require("firebase");
 
 var port = process.env.PORT || 3000;        // set our port
