@@ -89,7 +89,7 @@ function parse_data(devicename, data, condition) {
 		var match = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2}).(\d{3})$/.exec(tsInput);
 		var ts = match[1] + '-' + match[2] + '-' + match[3] + ' ' + match[4] + ':' + match[5] + ':' + match[6] + '.' + match[7];
 		var ttff = parseInt(fields[5]);
-		if ((condition === 'filter') && (ttff > 0)) {
+		if (((condition === 'filter') && (ttff > 0)) || (condition === 'nofilter')) {
 			var eventObj = {
 				device: devicename,
 				lat: parseFloat(fields[1])/100,
