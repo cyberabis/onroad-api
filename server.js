@@ -31,7 +31,7 @@ var topicName = 'onroad-topic';
 // Route
 router.get('/location/:devicename', function(req, res) {
 	var data = req.query.data;
-	var devicename = req.param.devicename;
+	var devicename = req.params.devicename;
 	//send_to_eventhubs(devicename, data);
 	send_to_topic(devicename, data);
     res.status(200).end();   
