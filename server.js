@@ -10,6 +10,7 @@ var moment = require('moment');
 var azure = require('azure');
 var client = require('twilio')('AC2b02ea2ccb0064fa38476bced2fdeebe', process.env.TWILIO_KEY);
 var Firebase = require("firebase");
+var uuid = require('node-uuid');
 
 var port = process.env.PORT || 3000;        // set our port
 
@@ -38,6 +39,12 @@ myFirebaseRef.child("account/simplelogin:2/mobile").on("value", function(snapsho
   	alert_mobile = snapshot.val();
   	console.log('Alert Mobile updated to: ' + alert_mobile);
 });
+var alertsCount;
+var alertsFb = myFirebaseRef.child('/account/simplelogin:2/alerts');
+alertsFb.once("value", function(snapshot) {
+  console.log("Alerts count: ", snapshot.val().length);
+  alertsCount = snapshot.val().length - 1;
+});
 //Firebase config ends
 
 // Route
@@ -53,7 +60,8 @@ router.get('/alert/:type/:devicename', function(req, res) {
 	var data = req.query.data;
 	var devicename = req.params.devicename;
 	var alert_type = req.params.type;
-	send_alert(devicename, alert_type, data);
+	//send_alert(devicename, alert_type, data);
+	send_alert_to_fb(devicename, alert_type, data);
     res.status(200).end();   
 });
 
@@ -166,17 +174,6 @@ function send_loc_to_fb(devicename, data) {
 			'locationtime': recent_location.time,
 			'devicenumber': devicename
 		});
-		/*
-		var payload = JSON.stringify(parsed_data);
-		serviceBusService.sendTopicMessage(topicName, payload, function(error) {
-		  if(!error) {
-		    // Message sent
-		    console.log('Message sent');
-		  } else {
-		  	console.log('Unable to send message: ' + error);
-		  }
-		});
-		*/ 
 	}
 };
 
@@ -244,6 +241,25 @@ function send_sms(alert){
 	    }
 	});
 */
+};
+
+//Main function to send alert to fb 
+function send_alert_to_fb(devicename, alert_type, data) {
+	var parsed_data = parse_data(devicename, data, 'nofilter');
+	var recent_location = parsed_data[parsed_data.length - 1];
+	var alert_obj = {location: recent_location, alert:alert_type};
+	alertsCount = alertsCount + 1;
+	var alerts = myFirebaseRef.child('/account/simplelogin:2/alerts/' + alertsCount);
+	alerts.set({
+	  alertid: uuid.v1(),
+	  alerttype: alert_obj.alert,
+	  devicenumber: devicename,
+	  latitude: alert_obj.location.lat,
+	  longitude: alert_obj.location.long,
+	  status: 'Open',
+	  time: alert_obj.location.time
+	});
+	send_sms(alert_obj);
 };
 
 //Main function to send to service bus alert 
