@@ -26,6 +26,7 @@ var my_key = process.env.EVENTHUBS_KEY;
 var ns_key = process.env.NS_KEY;
 var serviceBusService = azure.createServiceBusService('Endpoint=sb://'+ namespace + '.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=' + ns_key);
 var topicName = 'onroad-topic';
+var alertTopicName = 'onroad-alerts';
 //Service Topic Config ends
 
 // Route
@@ -34,6 +35,13 @@ router.get('/location/:devicename', function(req, res) {
 	var devicename = req.params.devicename;
 	//send_to_eventhubs(devicename, data);
 	send_to_topic(devicename, data);
+    res.status(200).end();   
+});
+router.get('/alert/:type/:devicename', function(req, res) {
+	var data = req.query.data;
+	var devicename = req.params.devicename;
+	var alert_type = req.params.type;
+	send_alert(devicename, alert_type, data);
     res.status(200).end();   
 });
 
@@ -84,7 +92,8 @@ function parse_data(devicename, data) {
 			lat: parseFloat(fields[1])/100,
 			long: parseFloat(fields[2])/100,
 			time: Date.parse(ts),
-			speed: parseFloat(fields[7])
+			speed: parseFloat(fields[7]),
+			ttff: parseInt(fields[5])
 		};
 		parsed_data.push(eventObj);
 	}
@@ -96,13 +105,30 @@ function parse_data(devicename, data) {
 //Main function to send to service bus topis 
 function send_to_topic(devicename, data) {
 	var parsed_data = parse_data(devicename, data);
-	var payload = JSON.stringify(parsed_data);
-	serviceBusService.sendTopicMessage(topicName, payload, function(error) {
+	if(ttff > 0) {
+		var payload = JSON.stringify(parsed_data);
+		serviceBusService.sendTopicMessage(topicName, payload, function(error) {
+		  if(!error) {
+		    // Message sent
+		    console.log('Message sent');
+		  } else {
+		  	console.log('Unable to send message: ' + error);
+		  }
+		}); 
+	}
+};
+
+//Main function to send to service bus topis 
+function send_alert(devicename, alert_type, data) {
+	var parsed_data = parse_data(devicename, data);
+	var alert_obj = {location: parsed_data, alert:alert_type};
+	var payload = JSON.stringify(alert_obj);
+	serviceBusService.sendTopicMessage(alertTopicName, payload, function(error) {
 	  if(!error) {
 	    // Message sent
-	    console.log('Message sent');
+	    console.log('Alert message sent: ' + payload);
 	  } else {
-	  	console.log('Unable to send message: ' + error);
+	  	console.log('Unable to send alert message: ' + error);
 	  }
 	}); 
 };
@@ -110,26 +136,29 @@ function send_to_topic(devicename, data) {
 //Main function to send to event hubs
 function send_to_eventhubs(devicename, data) {
 	var parsed_data = parse_data(devicename, data);
-	var payload = JSON.stringify(parsed_data);
-	var my_uri = 'https://' + namespace + '.servicebus.windows.net' + '/' + hubname + '/publishers/' + devicename + '/messages';
-	var my_sas = create_sas_token(my_uri, my_key_name, my_key);
-	var options = {
-	  hostname: namespace + '.servicebus.windows.net',
-	  port: 443,
-	  path: '/' + hubname + '/publishers/' + devicename + '/messages',
-	  method: 'POST',
-	  headers: {
-	    'Authorization': my_sas,
-	    'Content-Length': payload.length,
-	    'Content-Type': 'application/atom+xml;type=entry;charset=utf-8'
-	  }
-	};
-	var request = https.request(options, function(response) {
-	  console.log("EventHubs response statusCode (201 is good): ", response.statusCode);
-	});
-	request.on('error', function(e) {
-	  console.error(e);
-	});
-	request.write(payload);
-	request.end();
+	//TODO send only if TTFF > 0
+	if(ttff > 0) {
+		var payload = JSON.stringify(parsed_data);
+		var my_uri = 'https://' + namespace + '.servicebus.windows.net' + '/' + hubname + '/publishers/' + devicename + '/messages';
+		var my_sas = create_sas_token(my_uri, my_key_name, my_key);
+		var options = {
+		  hostname: namespace + '.servicebus.windows.net',
+		  port: 443,
+		  path: '/' + hubname + '/publishers/' + devicename + '/messages',
+		  method: 'POST',
+		  headers: {
+		    'Authorization': my_sas,
+		    'Content-Length': payload.length,
+		    'Content-Type': 'application/atom+xml;type=entry;charset=utf-8'
+		  }
+		};
+		var request = https.request(options, function(response) {
+		  console.log("EventHubs response statusCode (201 is good): ", response.statusCode);
+		});
+		request.on('error', function(e) {
+		  console.error(e);
+		});
+		request.write(payload);
+		request.end();
+	}
 };
