@@ -8,6 +8,8 @@ var https = require('https');
 var crypto = require('crypto');
 var moment = require('moment');
 var azure = require('azure');
+var client = require('twilio')('AC2b02ea2ccb0064fa38476bced2fdeebe', '68c07e41cb573448d3a374bce0787aa7');
+var Firebase = require("firebase");
 
 var port = process.env.PORT || 3000;        // set our port
 
@@ -29,12 +31,22 @@ var topicName = 'onroad-topic';
 var alertTopicName = 'onroad-alerts';
 //Service Topic Config ends
 
+//Firebase configration
+var alert_mobile = 9886165860;
+var myFirebaseRef = new Firebase("https://logbasedev.firebaseio.com/");
+myFirebaseRef.child("account/simplelogin:2/mobile").on("value", function(snapshot) {
+  	alert_mobile = snapshot.val();
+  	console.log('Alert Mobile updated to: ' + alert_mobile);
+});
+//Firebase config ends
+
 // Route
 router.get('/location/:devicename', function(req, res) {
 	var data = req.query.data;
 	var devicename = req.params.devicename;
 	//send_to_eventhubs(devicename, data);
-	send_to_topic(devicename, data);
+	//send_to_topic(devicename, data);
+	send_loc_to_fb(devicename, data);
     res.status(200).end();   
 });
 router.get('/alert/:type/:devicename', function(req, res) {
@@ -142,6 +154,98 @@ function send_to_topic(devicename, data) {
 	}
 };
 
+//Main function to send location tp firebase
+function send_loc_to_fb(devicename, data) {
+	var parsed_data = parse_data(devicename, data, 'filter');
+	if(parsed_data.length > 0) {
+		var recent_location = parsed_data[parsed_data.length - 1];
+		var live_car = myFirebaseRef.child('/account/simplelogin:2/livecars/0');
+		live_car.update({
+			'latitude': recent_location.lat,
+			'longitude': recent_location.long,
+			'locationtime': recent_location.time,
+			'devicenumber': devicename
+		});
+		/*
+		var payload = JSON.stringify(parsed_data);
+		serviceBusService.sendTopicMessage(topicName, payload, function(error) {
+		  if(!error) {
+		    // Message sent
+		    console.log('Message sent');
+		  } else {
+		  	console.log('Unable to send message: ' + error);
+		  }
+		});
+		*/ 
+	}
+};
+
+function send_sms(alert){
+	var msg = 'Alert received from car #555';
+	if (alert.alert === 'panic')
+		msg = 'Panic alert received from car #555';
+	else if(alert.alert === 'unplugged')
+		msg = 'Device unplugged from car #555';
+	else if(alert.alert === 'plugged')
+		msg = 'Device plugged into car #555';
+	//Send an SMS text message
+	console.log('Going to alert mobile: ' + alert_mobile);
+	client.sendMessage({
+	    to:'+91' + alert_mobile, // Any number Twilio can deliver to
+	    from: '+16508648755', // A number you bought from Twilio and can use for outbound communication
+	    body: msg // body of the SMS message
+	}, function(err, responseData) { //this function is executed when a response is received from Twilio
+	    if (!err) { // "err" is an error received during the request, if any
+	        // "responseData" is a JavaScript object containing data received from Twilio.
+	        // A sample response from sending an SMS message is here (click "JSON" to see how the data appears in JavaScript):
+	        // http://www.twilio.com/docs/api/rest/sending-sms#example-1
+	        console.log('Twilio sent msg from: '+ responseData.from); // outputs sender number
+	        console.log('SMS sent: ' + responseData.body); // outputs message
+	    }
+	});
+	/*
+	client.sendMessage({
+	    to:'+91' + '9791879840', // Any number Twilio can deliver to
+	    from: '+16508648755', // A number you bought from Twilio and can use for outbound communication
+	    body: msg // body of the SMS message
+	}, function(err, responseData) { //this function is executed when a response is received from Twilio
+	    if (!err) { // "err" is an error received during the request, if any
+	        // "responseData" is a JavaScript object containing data received from Twilio.
+	        // A sample response from sending an SMS message is here (click "JSON" to see how the data appears in JavaScript):
+	        // http://www.twilio.com/docs/api/rest/sending-sms#example-1
+	        console.log('Twilio sent msg from: '+ responseData.from); // outputs sender number
+	        console.log('SMS sent: ' + responseData.body); // outputs message
+	    }
+	});
+	client.sendMessage({
+	    to:'+91' + '9886165860', // Any number Twilio can deliver to
+	    from: '+16508648755', // A number you bought from Twilio and can use for outbound communication
+	    body: msg // body of the SMS message
+	}, function(err, responseData) { //this function is executed when a response is received from Twilio
+	    if (!err) { // "err" is an error received during the request, if any
+	        // "responseData" is a JavaScript object containing data received from Twilio.
+	        // A sample response from sending an SMS message is here (click "JSON" to see how the data appears in JavaScript):
+	        // http://www.twilio.com/docs/api/rest/sending-sms#example-1
+	        console.log('Twilio sent msg from: '+ responseData.from); // outputs sender number
+	        console.log('SMS sent: ' + responseData.body); // outputs message
+	    }
+	});
+	client.sendMessage({
+	    to:'+91' + '9677666498', // Any number Twilio can deliver to
+	    from: '+16508648755', // A number you bought from Twilio and can use for outbound communication
+	    body: msg // body of the SMS message
+	}, function(err, responseData) { //this function is executed when a response is received from Twilio
+	    if (!err) { // "err" is an error received during the request, if any
+	        // "responseData" is a JavaScript object containing data received from Twilio.
+	        // A sample response from sending an SMS message is here (click "JSON" to see how the data appears in JavaScript):
+	        // http://www.twilio.com/docs/api/rest/sending-sms#example-1
+	        console.log('Twilio sent msg from: '+ responseData.from); // outputs sender number
+	        console.log('SMS sent: ' + responseData.body); // outputs message
+	    }
+	});
+*/
+};
+
 //Main function to send to service bus alert 
 function send_alert(devicename, alert_type, data) {
 	var parsed_data = parse_data(devicename, data, 'nofilter');
@@ -155,6 +259,7 @@ function send_alert(devicename, alert_type, data) {
 	  	console.log('Unable to send alert message: ' + error);
 	  }
 	}); 
+	send_sms(alert_obj);
 };
 
 //Main function to send to event hubs
