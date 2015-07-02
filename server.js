@@ -79,6 +79,7 @@ function parse_data(devicename, data, condition) {
 	//As JSON
 	//data = '0,1101.444401,7700.254386,243.095589,20150629101258.011,0,0,0.000000,0.000000';
 	//Chop last char
+	console.log('Raw data: ' + data);
 	data = data.substring(0, data.length - 1);
 	var events = data.split('$');
 	var parsed_data = [];
@@ -88,7 +89,7 @@ function parse_data(devicename, data, condition) {
 		var match = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2}).(\d{3})$/.exec(tsInput);
 		var ts = match[1] + '-' + match[2] + '-' + match[3] + ' ' + match[4] + ':' + match[5] + ':' + match[6] + '.' + match[7];
 		var ttff = parseInt(fields[5]);
-		if ((condition == 'filter') && (ttff > 0)) {
+		if ((condition === 'filter') && (ttff > 0)) {
 			var eventObj = {
 				device: devicename,
 				lat: parseFloat(fields[1])/100,
