@@ -74,7 +74,7 @@ function create_sas_token(uri, key_name, key) {
 };
 
 //Data parser
-function parse_data(devicename, data) {
+function parse_data(devicename, data, condition) {
 	//TODO data needs to changed to parsed_data
 	//As JSON
 	//data = '0,1101.444401,7700.254386,243.095589,20150629101258.011,0,0,0.000000,0.000000';
@@ -87,25 +87,27 @@ function parse_data(devicename, data) {
 		var tsInput = fields[4];
 		var match = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2}).(\d{3})$/.exec(tsInput);
 		var ts = match[1] + '-' + match[2] + '-' + match[3] + ' ' + match[4] + ':' + match[5] + ':' + match[6] + '.' + match[7];
-		var eventObj = {
-			device: devicename,
-			lat: parseFloat(fields[1])/100,
-			long: parseFloat(fields[2])/100,
-			time: Date.parse(ts),
-			speed: parseFloat(fields[7]),
-			ttff: parseInt(fields[5])
-		};
-		parsed_data.push(eventObj);
+		var ttff = parseInt(fields[5]);
+		if ((condition == 'filter') && (ttff > 0)) {
+			var eventObj = {
+				device: devicename,
+				lat: parseFloat(fields[1])/100,
+				long: parseFloat(fields[2])/100,
+				time: Date.parse(ts),
+				speed: parseFloat(fields[7])
+			};
+			parsed_data.push(eventObj);
+		}
 	}
 	console.log('Parsed Data: ' + JSON.stringify(parsed_data));
 	//parsed_data = [{device: 'deviceid', lat: 11.0, long:77.0, time: 1435572381, speed:50.5}];
 	return parsed_data;
 };
 
-//Main function to send to service bus topis 
+//Main function to send to service bus topic
 function send_to_topic(devicename, data) {
-	var parsed_data = parse_data(devicename, data);
-	if(ttff > 0) {
+	var parsed_data = parse_data(devicename, data, 'filter');
+	if(parsed_data.length > 0) {
 		var payload = JSON.stringify(parsed_data);
 		serviceBusService.sendTopicMessage(topicName, payload, function(error) {
 		  if(!error) {
@@ -118,9 +120,9 @@ function send_to_topic(devicename, data) {
 	}
 };
 
-//Main function to send to service bus topis 
+//Main function to send to service bus alert 
 function send_alert(devicename, alert_type, data) {
-	var parsed_data = parse_data(devicename, data);
+	var parsed_data = parse_data(devicename, data, 'nofilter');
 	var alert_obj = {location: parsed_data, alert:alert_type};
 	var payload = JSON.stringify(alert_obj);
 	serviceBusService.sendTopicMessage(alertTopicName, payload, function(error) {
@@ -134,31 +136,31 @@ function send_alert(devicename, alert_type, data) {
 };
 
 //Main function to send to event hubs
+/*
 function send_to_eventhubs(devicename, data) {
 	var parsed_data = parse_data(devicename, data);
 	//TODO send only if TTFF > 0
-	if(ttff > 0) {
-		var payload = JSON.stringify(parsed_data);
-		var my_uri = 'https://' + namespace + '.servicebus.windows.net' + '/' + hubname + '/publishers/' + devicename + '/messages';
-		var my_sas = create_sas_token(my_uri, my_key_name, my_key);
-		var options = {
-		  hostname: namespace + '.servicebus.windows.net',
-		  port: 443,
-		  path: '/' + hubname + '/publishers/' + devicename + '/messages',
-		  method: 'POST',
-		  headers: {
-		    'Authorization': my_sas,
-		    'Content-Length': payload.length,
-		    'Content-Type': 'application/atom+xml;type=entry;charset=utf-8'
-		  }
-		};
-		var request = https.request(options, function(response) {
-		  console.log("EventHubs response statusCode (201 is good): ", response.statusCode);
-		});
-		request.on('error', function(e) {
-		  console.error(e);
-		});
-		request.write(payload);
-		request.end();
-	}
+	var payload = JSON.stringify(parsed_data);
+	var my_uri = 'https://' + namespace + '.servicebus.windows.net' + '/' + hubname + '/publishers/' + devicename + '/messages';
+	var my_sas = create_sas_token(my_uri, my_key_name, my_key);
+	var options = {
+	  hostname: namespace + '.servicebus.windows.net',
+	  port: 443,
+	  path: '/' + hubname + '/publishers/' + devicename + '/messages',
+	  method: 'POST',
+	  headers: {
+	    'Authorization': my_sas,
+	    'Content-Length': payload.length,
+	    'Content-Type': 'application/atom+xml;type=entry;charset=utf-8'
+	  }
+	};
+	var request = https.request(options, function(response) {
+	  console.log("EventHubs response statusCode (201 is good): ", response.statusCode);
+	});
+	request.on('error', function(e) {
+	  console.error(e);
+	});
+	request.write(payload);
+	request.end();
 };
+*/
