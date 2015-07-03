@@ -210,6 +210,9 @@ function send_alert_to_fb(devicename, alert_type, data) {
 	var alert_obj = {location: recent_location, alert:alert_type};
 	alertsCount = alertsCount + 1;
 	var alerts = myFirebaseRef.child('/account/simplelogin:2/alerts/' + alertsCount);
+	var alert_time = alert_obj.location.time;
+	if (alert_obj.location.time < 1420070400000) //GPS not locked
+		alert_time = Date.now();
 	alerts.set({
 	  alertid: uuid.v1(),
 	  alerttype: alert_obj.alert,
