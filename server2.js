@@ -163,6 +163,8 @@ function send_loc_to_fb(devicename, data) {
 			la2 = recent_location.lat;
 			lo2 = recent_location.long;
 			var new_dist = calc_distance(la1, lo1, la2, lo2, 'K');
+			la1 = la2;
+			lo1 = lo2;
 			console.log('New distance covered: ' + new_dist);
 			if (new_dist > 0) {
 				distance = distance + new_dist;
